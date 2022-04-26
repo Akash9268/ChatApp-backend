@@ -11,6 +11,17 @@ const io = new Server(httpServer, {
 
 //middleware
 io.use((socket, next) => {
+  const sessionId = socket.handshake.sessionId;
+  if(sessionId)
+  {
+    // find my session 
+    const session = null
+    if(session)
+    {
+
+    }
+  }
+
   const username = socket.handshake.auth.username;
   if (!username) {
     return next(new Error("Invalid Username"));
@@ -18,6 +29,8 @@ io.use((socket, next) => {
 
   socket.username = username;
   socket.userId = uuidv4();
+  socket.sessionId = uuidv4();
+
   next();
 });
 
@@ -37,7 +50,7 @@ io.on("connection", (socket) => {
   socket.emit("users", users);
 
   //connecting to the users
-  socket.emit("session", { userId: socket.userId, username: socket.username });
+  socket.emit("session", { seesionId: socket.sessionId,userId: socket.userId, username: socket.username });
 
   //new user event
   socket.broadcast.emit("user connected", {
