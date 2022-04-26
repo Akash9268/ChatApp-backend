@@ -17,16 +17,42 @@ io.use((socket, next) => {
   }
 
   socket.username = username;
-  //   socket.userId = uuidv4();
+  socket.userId = uuidv4();
   next();
 });
 
 //connecting to server
 io.on("connection", (socket) => {
   console.log("connection Established", socket.id);
+
+  //all connected users
+  const users = [];
+  for (let [id, socket] of io.of("/").sockets) {
+    users.push({
+      userId: socket.userId,
+      username: socket.username,
+    });
+  }
+  //all users event
+  socket.emit("users", users);
+
   //connecting to the users
-  console.log(socket.username);
   socket.emit("session", { userId: socket.userId, username: socket.username });
+
+  //new user event
+  socket.broadcast.emit("user connected", {
+    userId: socket.userId,
+    username: socket.username,
+  });
+
+  //new message event
+  socket.on("new message", (message) => {
+    socket.broadcast.emit("new message", {
+      userId: socket.userId,
+      username: socket.username,
+      message,
+    });
+  });
 });
 
 console.log("Listening to port....");
