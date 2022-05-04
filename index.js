@@ -4,6 +4,13 @@ import { v4 as uuidv4 } from "uuid";
 import { saveSession, findSession, findAllSessions } from "./sessionStorage.js";
 import { saveMessage, findMessagesForUser } from "./messageStorage.js";
 
+import {
+  privateDecrypt,
+  constants,
+  publicEncrypt,
+  generateKeyPairSync,
+} from "crypto";
+
 const httpServer = createServer();
 const io = new Server(httpServer, {
   cors: {
@@ -36,6 +43,13 @@ io.use((socket, next) => {
   socket.username = username;
   socket.userId = uuidv4();
   socket.sessionId = uuidv4();
+  const { publicKey, privateKey } = generateKeyPairSync("rsa", {
+    modulusLength: 2048,
+  });
+
+  socket.privateKey = privateKey;
+  socket.publicKey = publicKey;
+  //key pair generate
   next();
 });
 
@@ -57,8 +71,11 @@ function getMessagesForUser(userId) {
 //connecting to server
 io.on("connection", (socket) => {
   console.log("connection Established", socket.id);
+  console.log(socket.publicKey);
+
   saveSession(socket.sessionId, {
     userId: socket.userId,
+    userPbKey: socket.publicKey,
     username: socket.username,
     connected: true,
   });
@@ -71,6 +88,7 @@ io.on("connection", (socket) => {
     if (session.userId !== socket.userId) {
       users.push({
         userId: session.userId,
+        userPublicKey: session.userPbKey,
         username: session.username,
         connected: session.connected,
         messages: usermessages.get(session.userId) || [],
@@ -80,6 +98,7 @@ io.on("connection", (socket) => {
 
   //all users event
   socket.emit("users", users);
+
   //connecting to the users
   socket.emit("session", {
     sessionId: socket.sessionId,
